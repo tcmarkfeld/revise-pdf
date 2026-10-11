@@ -18,9 +18,10 @@ brew install --cask tcmarkfeld/tap/revise
 
 Requires a Mac with Apple silicon (M1 or later) running macOS 12 or newer.
 
-To update later, run `brew upgrade --cask revise`. To uninstall, run
-`brew uninstall --cask revise` (add `--zap` to also remove its settings and
-backups).
+Revise keeps itself up to date: it checks for a new version once a day and
+offers to install it (or choose **Revise → Check for Updates…** any time).
+To uninstall, run `brew uninstall --cask revise` (add `--zap` to also remove
+its settings and backups).
 
 ## Opening a PDF
 
@@ -91,6 +92,7 @@ lists, styles) comes back exactly as you left it.
 | --- | --- |
 | Open / Save / Save As | ⌘O / ⌘S / ⇧⌘S |
 | Undo / Redo | ⌘Z / ⇧⌘Z |
+| Delete to start of line | ⌘⌫ |
 | Bold / Italic / Underline | ⌘B / ⌘I / ⌘U |
 | Strikethrough | ⇧⌘X |
 | Normal text / Heading 1–3 | ⌥⌘0 / ⌥⌘1–3 |
@@ -117,7 +119,7 @@ design-heavy PDFs such as magazines or posters may not rebuild perfectly.
 ## Feedback
 
 Found a PDF that doesn't come out right, or a bug? Please
-[open an issue](https://github.com/tcmarkfeld/pdf-editor/issues) — attaching
+[open an issue](https://github.com/tcmarkfeld/revise-pdf/issues) — attaching
 the PDF (if you can share it) helps a lot.
 
 Building from source or contributing? See

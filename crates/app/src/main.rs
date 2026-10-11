@@ -12,6 +12,7 @@ mod macos;
 mod menus;
 mod theme;
 mod toolbar;
+mod updater;
 mod view;
 mod worker;
 

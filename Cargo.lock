@@ -192,6 +192,7 @@ dependencies = [
  "reconstruction",
  "render",
  "rfd",
+ "serde_json",
 ]
 
 [[package]]
