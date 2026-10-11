@@ -38,6 +38,7 @@ impl NativeMenu {
                     Some("About Revise"),
                     Some(AboutMetadata { name: Some("Revise".into()), version: Some(env!("CARGO_PKG_VERSION").into()), ..Default::default() }),
                 ),
+                &item("Check for Updates…", Command::CheckForUpdates, None),
                 &sep(),
                 &PredefinedMenuItem::hide(None),
                 &PredefinedMenuItem::hide_others(None),

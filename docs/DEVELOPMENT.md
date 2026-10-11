@@ -28,6 +28,9 @@ app is self-contained: PDFium is bundled in `Contents/Frameworks`. Without
 
 ## Releasing
 
+Bump `version` in the workspace `Cargo.toml` first — installed copies offer
+the update only when the release's version is higher than their own. Then:
+
 ```bash
 scripts/package-macos.sh --release
 ```
@@ -41,6 +44,12 @@ prints the dmg's SHA-256. The version comes from `Cargo.toml`.
 Then attach the dmg to a GitHub release tagged `v<version>` and update
 `version` and `sha256` in `Casks/revise.rb` in the
 [tcmarkfeld/homebrew-tap](https://github.com/tcmarkfeld/homebrew-tap) repo.
+
+The app checks `releases/latest` of `tcmarkfeld/revise-pdf` once a day (and
+on *Revise → Check for Updates…*). Installing downloads the release's `.dmg`,
+requires the app inside to pass Gatekeeper and carry the same Team ID as the
+running app, swaps the bundle in place and relaunches. Drafts and
+pre-releases are never offered.
 
 ## Debugging
 

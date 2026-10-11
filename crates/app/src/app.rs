@@ -51,6 +51,7 @@ pub enum Command {
     InsertImage,
     InsertTable,
     PageSetup,
+    CheckForUpdates,
     Find,
     Replace,
     FindNext,
@@ -97,6 +98,7 @@ pub struct App {
     toolbar: crate::toolbar::Toolbar,
     find: crate::findbar::FindBar,
     page_setup: crate::pagesetup::PageSetup,
+    updater: crate::updater::Updater,
     capture: Option<Capture>,
     /// Input events to feed egui next frame (menu edit commands, scripts).
     injected: Vec<egui::Event>,
@@ -125,6 +127,7 @@ impl App {
             toolbar: Default::default(),
             find: Default::default(),
             page_setup: Default::default(),
+            updater: Default::default(),
             capture: Capture::from_env(),
             injected: Vec::new(),
             injected_commands: Vec::new(),
@@ -135,6 +138,9 @@ impl App {
         theme::install(&cc.egui_ctx);
         #[cfg(target_os = "macos")]
         crate::macos::set_context(&cc.egui_ctx);
+        if app.capture.is_none() {
+            app.updater.check_daily(&cc.egui_ctx);
+        }
         if let Some(path) = file {
             app.open(&cc.egui_ctx, path);
         }
@@ -345,6 +351,7 @@ impl App {
             }
             Command::Appearance(pref) => return ctx.set_theme(pref),
             Command::Quit => return self.request(ctx, Pending::Quit),
+            Command::CheckForUpdates => return self.updater.check_now(ctx),
             Command::RevertToOriginal => {
                 if self.pdf_path.as_deref().is_some_and(crate::persist::has_original_backup) {
                     self.request(ctx, Pending::Revert);
@@ -683,6 +690,9 @@ impl App {
         if let Some(view) = &mut self.doc {
             self.page_setup.ui(ctx, view);
         }
+        if self.updater.ui(ctx) {
+            self.request(ctx, Pending::Quit);
+        }
         let p = theme::palette(ctx);
         let name = self.file_stem();
         if let Some(action) = self.confirm.clone() {
@@ -926,6 +936,8 @@ impl eframe::App for App {
                 self.run(&ctx, Command::Quit);
             } else if step == "pagesetup" {
                 self.run(&ctx, Command::PageSetup);
+            } else if step == "updates" {
+                self.run(&ctx, Command::CheckForUpdates);
             } else if step == "find" || step == "replace" {
                 self.run(&ctx, if step == "find" { Command::Find } else { Command::Replace });
             } else if let Some(text) = step.strip_prefix("keys:") {

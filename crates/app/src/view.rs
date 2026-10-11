@@ -548,6 +548,13 @@ impl DocView {
             Key::ArrowDown => mv(e, Move::Down),
             Key::Home => mv(e, if m.command { Move::DocStart } else { Move::LineStart }),
             Key::End => mv(e, if m.command { Move::DocEnd } else { Move::LineEnd }),
+            Key::Backspace if m.command => {
+                // Delete back to the start of the visual line.
+                if e.sel.is_collapsed() {
+                    e.move_caret(Move::LineStart, true, layout);
+                }
+                e.backspace(false);
+            }
             Key::Backspace => e.backspace(m.alt),
             Key::Delete => e.delete_forward(m.alt),
             Key::Enter => e.enter(),

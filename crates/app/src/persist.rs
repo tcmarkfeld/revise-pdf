@@ -17,7 +17,7 @@ const LEGACY_ATTACHMENT: &str = "reflow-document.json";
 
 /// `~/Library/Application Support/Revise/<sub>` (created on demand; data
 /// from before the rename is moved over from `.../Reflow`).
-fn support_dir(sub: &str) -> Option<PathBuf> {
+pub fn support_dir(sub: &str) -> Option<PathBuf> {
     let home = std::env::var_os("HOME")?;
     let root = PathBuf::from(home).join("Library/Application Support");
     if !root.join("Revise").exists() && root.join("Reflow").exists() {
