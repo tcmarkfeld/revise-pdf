@@ -7,7 +7,8 @@
 #              notarize + staple it, ready to publish. Uses $SIGN_IDENTITY
 #              (default: the first "Developer ID Application" identity) and
 #              the notarytool keychain profile $NOTARY_PROFILE (default
-#              revise-notary, see `xcrun notarytool store-credentials`).
+#              revise-notary, see `xcrun notarytool store-credentials`), or
+#              $APPLE_ID / $APPLE_TEAM_ID / $APPLE_APP_PASSWORD when set (CI).
 # The bundle is self-contained: PDFium ships in Contents/Frameworks, where the
 # app looks for it first. Without --release it is signed ad-hoc, which is
 # enough to run on this Mac only.
@@ -125,7 +126,11 @@ fi
 
 if $release; then
   sign dist/Revise.dmg
-  xcrun notarytool submit dist/Revise.dmg --keychain-profile "${NOTARY_PROFILE:-revise-notary}" --wait
+  if [ -n "${APPLE_ID:-}" ]; then
+    xcrun notarytool submit dist/Revise.dmg --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+  else
+    xcrun notarytool submit dist/Revise.dmg --keychain-profile "${NOTARY_PROFILE:-revise-notary}" --wait
+  fi
   xcrun stapler staple dist/Revise.dmg
   spctl --assess --type open --context context:primary-signature -v dist/Revise.dmg
   echo "Notarized dist/Revise.dmg (version $version)"

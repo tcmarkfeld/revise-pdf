@@ -1,0 +1,108 @@
+# Actions → Release → Run workflow, enter a version (e.g. 0.2.0). Tests, bumps
+# the version on main, builds, signs + notarizes the dmg, publishes the GitHub
+# release (which installed copies pick up as an update) and updates the
+# Homebrew cask. Nothing is pushed or published unless the build succeeds.
+#
+# Secrets: MACOS_CERTIFICATE (base64 .p12 of the Developer ID Application
+# certificate), MACOS_CERTIFICATE_PASSWORD, APPLE_ID, APPLE_TEAM_ID,
+# APPLE_APP_PASSWORD (app-specific password), TAP_TOKEN (fine-grained token
+# with contents read/write on tcmarkfeld/homebrew-tap).
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. 0.2.0)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version
+        run: |
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 1.2.3"; exit 1; }
+          current=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "$(printf '%s\n%s\n' "$current" "$VERSION" | sort -V | tail -1)" != "$VERSION" ] || [ "$current" = "$VERSION" ]; then
+            echo "::error::$VERSION must be higher than the current version $current"; exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Tag v$VERSION already exists"; exit 1
+          fi
+          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Fetch PDFium
+        run: scripts/fetch-pdfium.sh
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(uuidgen)
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+          curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain" || true
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$keychain"
+
+      - name: Build, sign and notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: scripts/package-macos.sh --release
+
+      - name: Commit version and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release $VERSION"
+          git tag "v$VERSION"
+          git push origin HEAD:main "v$VERSION"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v$VERSION" dist/Revise.dmg --title "Revise $VERSION" --generate-notes --verify-tag
+
+      - name: Update Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          sha=$(shasum -a 256 dist/Revise.dmg | cut -d' ' -f1)
+          tap="$RUNNER_TEMP/homebrew-tap"
+          git clone "https://x-access-token:$TAP_TOKEN@github.com/tcmarkfeld/homebrew-tap.git" "$tap"
+          cd "$tap"
+          sed -i '' -e "s/^  version \".*\"/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" Casks/revise.rb
+          # The app updates itself, so `brew upgrade` should leave it alone.
+          grep -q auto_updates Casks/revise.rb || perl -0pi -e 's/\n(  depends_on)/\n  auto_updates true\n\n$1/' Casks/revise.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "revise $VERSION"
+          git push
