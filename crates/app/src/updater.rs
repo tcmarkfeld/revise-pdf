@@ -236,6 +236,14 @@ fn install_release(r: &Release) -> Result<(), String> {
         run("curl", [OsStr::new("-fsSL"), OsStr::new("-o"), dmg.as_os_str(), OsStr::new(url)]).map_err(|_| "The download failed.".to_string())?;
         run("hdiutil", [OsStr::new("attach"), OsStr::new("-nobrowse"), OsStr::new("-readonly"), OsStr::new("-mountpoint"), mount.as_os_str(), dmg.as_os_str()])?;
         let new = mount.join("Revise.app");
+        // A release whose app isn't actually newer would be offered again
+        // forever after installing it.
+        let plist = new.join("Contents/Info.plist");
+        let version = run("/usr/libexec/PlistBuddy", [OsStr::new("-c"), OsStr::new("Print :CFBundleShortVersionString"), plist.as_os_str()])?;
+        let version = String::from_utf8_lossy(&version).trim().to_string();
+        if !is_newer(&version, CURRENT) {
+            return Err(format!("The download contains version {version}, which isn’t newer than this one."));
+        }
         verify(&new, &bundle)?;
         replace(&new, &bundle)
     })();

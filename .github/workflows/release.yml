@@ -1,7 +1,9 @@
-# Actions → Release → Run workflow, enter a version (e.g. 0.2.0). Tests, bumps
-# the version on main, builds, signs + notarizes the dmg, publishes the GitHub
-# release (which installed copies pick up as an update) and updates the
-# Homebrew cask. Nothing is pushed or published unless the build succeeds.
+# Actions → Release → Run workflow, enter a version (e.g. 0.2.0). Tests, sets
+# the version, builds, signs + notarizes the dmg, tags the release commit,
+# publishes the GitHub release (which installed copies pick up as an update)
+# and updates the Homebrew cask. Nothing is pushed or published unless the
+# build succeeds. main is never pushed to (it only accepts pull requests):
+# the version bump lives on the release tag, and tags are the version history.
 #
 # Secrets: MACOS_CERTIFICATE (base64 .p12 of the Developer ID Application
 # certificate), MACOS_CERTIFICATE_PASSWORD, APPLE_ID, APPLE_TEAM_ID,
@@ -35,9 +37,10 @@ jobs:
           VERSION="${VERSION#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 1.2.3"; exit 1; }
-          current=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)
+          current=$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed 's|.*refs/tags/v||' | sort -V | tail -1)
+          current=${current:-0.0.0}
           if [ "$(printf '%s\n%s\n' "$current" "$VERSION" | sort -V | tail -1)" != "$VERSION" ] || [ "$current" = "$VERSION" ]; then
-            echo "::error::$VERSION must be higher than the current version $current"; exit 1
+            echo "::error::$VERSION must be higher than the latest release tag v$current"; exit 1
           fi
           if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
             echo "::error::Tag v$VERSION already exists"; exit 1
@@ -78,13 +81,13 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: scripts/package-macos.sh --release
 
-      - name: Commit version and tag
+      - name: Tag release
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "Release $VERSION"
           git tag "v$VERSION"
-          git push origin HEAD:main "v$VERSION"
+          git push origin "v$VERSION"
 
       - name: Publish GitHub release
         env:

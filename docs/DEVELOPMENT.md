@@ -30,8 +30,10 @@ app is self-contained: PDFium is bundled in `Contents/Frameworks`. Without
 
 In GitHub: **Actions → Release → Run workflow**, enter the new version (e.g.
 `0.2.0`). The [release workflow](../.github/workflows/release.yml) runs the
-tests, sets the version in `Cargo.toml` and commits + tags it on `main`,
-builds, signs and notarizes the dmg, publishes the GitHub release with
+tests, sets the version, builds, signs and notarizes the dmg, tags a
+release commit carrying the version bump (it never pushes to `main`, so the
+version in `main`'s `Cargo.toml` stays as is — release tags are the version
+history), publishes the GitHub release with
 generated notes, and updates `version`/`sha256` in `Casks/revise.rb` in
 [tcmarkfeld/homebrew-tap](https://github.com/tcmarkfeld/homebrew-tap).
 Nothing is pushed or published unless the build and notarization succeed.
