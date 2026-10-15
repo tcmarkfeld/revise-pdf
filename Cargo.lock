@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "app"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "arboard",
  "document",
@@ -814,7 +814,7 @@ dependencies = [
 
 [[package]]
 name = "document"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.23.1",
  "serde",
@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "editor"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "layout",
@@ -1091,7 +1091,7 @@ dependencies = [
 
 [[package]]
 name = "export"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "editor",
@@ -1203,7 +1203,7 @@ dependencies = [
 
 [[package]]
 name = "fonts"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "parley",
@@ -1817,7 +1817,7 @@ dependencies = [
 
 [[package]]
 name = "layout"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "fonts",
@@ -2532,7 +2532,7 @@ dependencies = [
 
 [[package]]
 name = "pdf_source"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "image",
@@ -2875,7 +2875,7 @@ dependencies = [
 
 [[package]]
 name = "reconstruction"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "pdf_source",
@@ -2910,7 +2910,7 @@ dependencies = [
 
 [[package]]
 name = "render"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "document",
  "epaint",
